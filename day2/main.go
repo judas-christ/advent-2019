@@ -14,9 +14,7 @@ func check(e error) {
 }
 
 func main() {
-	strInput, err := ioutil.ReadFile("day2/input.txt")
-	check(err)
-	inputs := parseInput(strInput)
+	inputs := readInputs()
 	// initial value of [0]
 	fmt.Println(inputs[0])
 
@@ -29,6 +27,28 @@ func main() {
 
 	fmt.Println("Answer")
 	fmt.Println(inputs[0])
+
+	// part 2
+	maxVal := len(inputs)
+	for noun := 0; noun < maxVal; noun++ {
+		for verb := 0; verb < maxVal; verb++ {
+			inputs = readInputs()
+			inputs[1] = noun
+			inputs[2] = verb
+			runProgram(inputs)
+			result := inputs[0]
+			if result == 19690720 {
+				fmt.Printf("noun(%d) * 100 + verb(%d) = %d", noun, verb, noun*100+verb)
+				return
+			}
+		}
+	}
+}
+
+func readInputs() []int {
+	strInput, err := ioutil.ReadFile("day2/input.txt")
+	check(err)
+	return parseInput(strInput)
 }
 
 func parseInput(strInput []byte) []int {
