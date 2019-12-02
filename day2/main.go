@@ -44,20 +44,21 @@ func parseInput(strInput []byte) []int {
 
 func runProgram(inputs []int) {
 	pos := 0
-	for cmd := inputs[pos]; cmd != 99; cmd = inputs[pos] {
-		switch cmd {
+	for opcode := inputs[pos]; opcode != 99; opcode = inputs[pos] {
+		switch opcode {
 		case 1:
 			posA, posB, posResult := parseAddresses(pos, inputs)
 			inputs[posResult] = inputs[posA] + inputs[posB]
+			pos += 4
 		case 2:
 			posA, posB, posResult := parseAddresses(pos, inputs)
 			inputs[posResult] = inputs[posA] * inputs[posB]
+			pos += 4
 		case 99:
 			return
 		default:
-			panic("UNEXPECTED COMMAND! " + string(cmd))
+			panic("UNEXPECTED OPCODE! " + string(opcode))
 		}
-		pos += 4
 	}
 }
 
