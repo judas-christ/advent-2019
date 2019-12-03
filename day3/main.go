@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -15,8 +16,16 @@ func check(err error) {
 
 func main() {
 	inputs := readInputs()
-	dist := calcDistance(inputs[0], inputs[1])
-	fmt.Println(dist)
+	wire1 := parsePath(inputs[0])
+	wire2 := parsePath(inputs[1])
+
+	//part 1
+	dist := calcDistance(wire1, wire2)
+	fmt.Println("Part 1", dist)
+
+	//part 2
+	steps := calcSteps(wire1, wire2)
+	fmt.Println("Part 2", steps)
 }
 
 func readInputs() []string {
@@ -31,21 +40,25 @@ type Coords []Coord
 // Intersections gets all intersections
 func (c Coords) Intersections(o Coords) Coords {
 	r := make(Coords, 0)
-	for ci := 1; ci < len(c); ci++ {
-		for oi := 1; oi < len(o); oi++ {
-			currC := c[ci]
-			lastC := c[ci-1]
-			currO := o[oi]
-			lastO := o[oi-1]
+	for ci := range c[1:] {
+		lastC := c[ci]
+		currC := c[ci+1]
+		for oi := range o[1:] {
+			lastO := o[oi]
+			currO := o[oi+1]
 			// go over lines
-			minC := Coords{lastC, currC}.Min()
-			maxC := Coords{lastC, currC}.Max()
-			minO := Coords{lastO, currO}.Min()
-			maxO := Coords{lastO, currO}.Max()
-			for cx := minC.x; cx <= maxC.x; cx++ {
-				for cy := minC.y; cy <= maxC.y; cy++ {
-					for ox := minO.x; ox <= maxO.x; ox++ {
-						for oy := minO.y; oy <= maxO.y; oy++ {
+			minCx := min(lastC.x, currC.x)
+			maxCx := max(lastC.x, currC.x)
+			minCy := min(lastC.y, currC.y)
+			maxCy := max(lastC.y, currC.y)
+			minOx := min(lastO.x, currO.x)
+			maxOx := max(lastO.x, currO.x)
+			minOy := min(lastO.y, currO.y)
+			maxOy := max(lastO.y, currO.y)
+			for cx := minCx; cx <= maxCx; cx++ {
+				for cy := minCy; cy <= maxCy; cy++ {
+					for ox := minOx; ox <= maxOx; ox++ {
+						for oy := minOy; oy <= maxOy; oy++ {
 							if cx == ox && cy == oy && !(cx == 0 && cy == 0) {
 								r = append(r, Coord{cx, cy})
 							}
@@ -58,9 +71,9 @@ func (c Coords) Intersections(o Coords) Coords {
 	return r
 }
 
-// Min gets the minimum coord by manhattan distance
-func (c Coords) Min() Coord {
-	minD := 100000
+// MinDistance gets the minimum coord by manhattan distance
+func (c Coords) MinDistance() Coord {
+	minD := math.MaxInt32
 	min := c[0]
 	for i := range c {
 		dist := c[i].Distance()
@@ -72,18 +85,22 @@ func (c Coords) Min() Coord {
 	return min
 }
 
-// Max gets the Maximum coord by manhattan distance
-func (c Coords) Max() Coord {
-	maxD := 0
-	max := c[0]
-	for i := range c {
-		dist := c[i].Distance()
-		if dist > maxD {
-			maxD = dist
-			max = c[i]
+// StepsTo calculates the number of steps in a list to a specific coord
+func (c Coords) StepsTo(coord Coord) int {
+	steps := 0
+	for ci := range c[1:] {
+		last := c[ci]
+		curr := c[ci+1]
+		// case where this is the segment coord belongs to
+		if last.x == coord.x && curr.x == coord.x && (last.y <= coord.y && curr.y >= coord.y || last.y >= coord.y && curr.y <= coord.y) ||
+			last.y == coord.y && curr.y == coord.y && (last.x <= coord.x && curr.x >= coord.x || last.x >= coord.x && curr.x <= coord.x) {
+			steps += last.DistanceTo(coord)
+			return steps
 		}
+		// otherwise
+		steps += last.DistanceTo(curr)
 	}
-	return max
+	return steps
 }
 
 // Coord is a coordinate
@@ -111,6 +128,11 @@ func (c Coord) Distance() int {
 	return abs(c.x) + abs(c.y)
 }
 
+// DistanceTo calculates manhattan distance to other coord
+func (c Coord) DistanceTo(other Coord) int {
+	return abs(c.x-other.x) + abs(c.y-other.y)
+}
+
 func abs(x int) int {
 	if x < 0 {
 		return -x
@@ -118,11 +140,23 @@ func abs(x int) int {
 	return x
 }
 
-func calcDistance(wire1, wire2 string) int {
-	wire1coords := parsePath(wire1)
-	wire2coords := parsePath(wire2)
-	inters := wire1coords.Intersections(wire2coords)
-	minInter := inters.Min()
+func max(x, y int) int {
+	if x >= y {
+		return x
+	}
+	return y
+}
+
+func min(x, y int) int {
+	if x <= y {
+		return x
+	}
+	return y
+}
+
+func calcDistance(wire1, wire2 Coords) int {
+	inters := wire1.Intersections(wire2)
+	minInter := inters.MinDistance()
 	return minInter.Distance()
 }
 
@@ -155,4 +189,20 @@ func parseCoord(str string) (int, int) {
 	default:
 		panic("invalid direction")
 	}
+}
+
+func calcSteps(wire1, wire2 Coords) int {
+	inters := wire1.Intersections(wire2)
+	minStep := math.MaxInt32
+	// minInter := inters[0]
+	for i := range inters {
+		steps1 := wire1.StepsTo(inters[i])
+		steps2 := wire2.StepsTo(inters[i])
+		steps := steps1 + steps2
+		if steps <= minStep {
+			minStep = steps
+			// minInter = inters[i]
+		}
+	}
+	return minStep
 }
